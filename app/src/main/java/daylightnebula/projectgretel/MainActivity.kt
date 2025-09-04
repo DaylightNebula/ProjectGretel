@@ -23,23 +23,28 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.liftric.kvault.KVault
 import daylightnebula.projectgretel.components.HomeComponent
 import daylightnebula.projectgretel.components.TrackingComponent
 import daylightnebula.projectgretel.ui.theme.ProjectGretelTheme
 
-var lastGpsTime: Long = 0
-var lastGpsAccuracy: Float = 0f
-var lastLatitude: Double = 0.0
-var lastLongitude: Double = 0.0
+val CURRENT_TRAIL_KV_ID = "gretel.kv.current_trail"
+val LOCATION_PERMISSION_REQUEST_CODE = 1
 
 class MainActivity : ComponentActivity() {
+    val store = KVault(this, "user.kv")
+
+    var lastGpsTime: Long = 0
+    var lastGpsAccuracy: Float = 0f
+    var lastLatitude: Double = 0.0
+    var lastLongitude: Double = 0.0
+
     lateinit var databaseHelper: DatabaseHelper
     lateinit var database: SQLiteDatabase
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private lateinit var locationRequest: LocationRequest
-    private val LOCATION_PERMISSION_REQUEST_CODE = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         databaseHelper = DatabaseHelper(this)
@@ -72,12 +77,6 @@ class MainActivity : ComponentActivity() {
                     lastLongitude = location.longitude
                     lastGpsTime = location.time
                     lastGpsAccuracy = location.accuracy
-
-                    // Store or process the location data
-                    Log.d(
-                        "GPS", "Lat: " + lastLatitude + ", Lng: " + lastLongitude +
-                                ", Accuracy: " + lastGpsAccuracy + "m"
-                    )
                 }
             }
         }
