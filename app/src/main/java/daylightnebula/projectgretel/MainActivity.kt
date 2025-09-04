@@ -1,5 +1,6 @@
 package daylightnebula.projectgretel
 
+import android.database.sqlite.SQLiteDatabase
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,7 +15,13 @@ import daylightnebula.projectgretel.components.TrackingComponent
 import daylightnebula.projectgretel.ui.theme.ProjectGretelTheme
 
 class MainActivity : ComponentActivity() {
+    lateinit var databaseHelper: DatabaseHelper
+    lateinit var database: SQLiteDatabase
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        databaseHelper = DatabaseHelper(this)
+        database = databaseHelper.writableDatabase
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
