@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <style name="Base.Theme.ProjectGretel" parent="Theme.AppCompat.DayNight.DarkActionBar">
+        <!-- Customize your light theme here. -->
+        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+    </style>
 
-    <style name="Theme.ProjectGretel" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.ProjectGretel" parent="Theme.AppCompat.DayNight.DarkActionBar" />
 </resources>
