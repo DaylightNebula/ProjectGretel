@@ -1,26 +1,21 @@
 package daylightnebula.projectgretel
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteDatabase
 import android.os.Bundle
 import android.os.Looper
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.liftric.kvault.KVault
 
 val CURRENT_TRAIL_KV_ID = "gretel.kv.current_trail"
 val LOCATION_PERMISSION_REQUEST_CODE = 1
@@ -48,7 +43,7 @@ class MainActivity : AppCompatActivity() {
 
         // setup UI
         enableEdgeToEdge()
-        setContentView(R.layout.active_main)
+        setContentView(R.layout.activity_main)
 
         // setup fused location client
         fusedLocationClient = LocationServices
