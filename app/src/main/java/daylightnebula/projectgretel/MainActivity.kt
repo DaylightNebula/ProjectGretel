@@ -34,22 +34,7 @@ val LOCATION_PERMISSION_REQUEST_CODE = 1
 class MainActivity : ComponentActivity() {
     val store = KVault(this, "user.kv")
 
-    var lastGpsTime: Long = 0
-    var lastGpsAccuracy: Float = 0f
-    var lastLatitude: Double = 0.0
-    var lastLongitude: Double = 0.0
-
-    lateinit var databaseHelper: DatabaseHelper
-    lateinit var database: SQLiteDatabase
-
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var locationCallback: LocationCallback
-    private lateinit var locationRequest: LocationRequest
-
     override fun onCreate(savedInstanceState: Bundle?) {
-        databaseHelper = DatabaseHelper(this)
-        database = databaseHelper.writableDatabase
-
         super.onCreate(savedInstanceState)
 
         // setup UI
@@ -60,34 +45,11 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // setup fused location client
-        fusedLocationClient = LocationServices
-            .getFusedLocationProviderClient(this)
-
-        // setup location request
-        locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 60000)
-            .setMinUpdateIntervalMillis(10000)
-            .build();
-
-        // create location callback
-        locationCallback = object: LocationCallback() {
-            override fun onLocationResult(result: LocationResult) {
-                for (location in result.locations) {
-                    lastLatitude = location.latitude
-                    lastLongitude = location.longitude
-                    lastGpsTime = location.time
-                    lastGpsAccuracy = location.accuracy
-                }
-            }
-        }
-
         // setup permissions
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED) {
-            startLocationUpdates()
-        } else {
+        ) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(
@@ -108,45 +70,13 @@ class MainActivity : ComponentActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults, deviceId)
 
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                startLocationUpdates()
-            else
+            if (!grantResults.isNotEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED)
                 Toast.makeText(
                     this,
                     "Location permission required",
                     Toast.LENGTH_SHORT
                 ).show()
         }
-    }
-
-    private fun startLocationUpdates() {
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED)
-            fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                Looper.getMainLooper()
-            )
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (checkLocationPermissions())
-            startLocationUpdates()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        fusedLocationClient.removeLocationUpdates(locationCallback)
-    }
-
-    private fun checkLocationPermissions(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
     }
 }
 
