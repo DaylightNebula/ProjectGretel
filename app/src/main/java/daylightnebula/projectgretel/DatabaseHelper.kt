@@ -1,10 +1,12 @@
 package daylightnebula.projectgretel
 
+import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
 import android.widget.Toast
+import daylightnebula.projectgretel.data.Trail
 import java.util.UUID
 
 class DatabaseHelper private constructor(
@@ -34,11 +36,11 @@ class DatabaseHelper private constructor(
                     id UUID NOT NULL PRIMARY KEY,
                     name TEXT NOT NULL,
                     created_at TIMESTAMP NOT NULL,
-                    is_favorite BOOLEAN NOT NULL
+                    is_favorite INTEGER NOT NULL
                 );
                 
                 CREATE TABLE IF NOT EXISTS trail_points (
-                    trail_id UUID NOT NULL REFERENCES trails(id),
+                    trail_id UUID NOT NULL REFERENCES trails(id) ON DELETE CASCADE,
                     time TIMESTAMP NOT NULL,
                     longitude DECIMAL NOT NULL,
                     latitude DECIMAL NOT NULL,
@@ -49,11 +51,7 @@ class DatabaseHelper private constructor(
         )
     }
 
-    private lateinit var db: SQLiteDatabase
-
     override fun onCreate(db: SQLiteDatabase) {
-        this.db = db
-
         for (idx in 1 .. VERSION) {
             val schema = SCHEMAS[idx]
                 ?: throw IllegalStateException("No schema for version $idx")
@@ -72,37 +70,103 @@ class DatabaseHelper private constructor(
         }
     }
 
-    fun insertTrail(
-        trackId: UUID,
-        name: String,
-        time: Long = System.currentTimeMillis(),
-        isFavorite: Boolean = false
-    ) {
-        if (!this::db.isInitialized) {
-            Log.e("DatabaseHelper", "DB not initialized!")
-            return
+    fun insertTrail(trail: Trail) {
+        val values = ContentValues().apply {
+            put("id", trail.id.toString())
+            put("name", trail.name)
+            put("created_at", trail.time)
+            put("is_favorite", if (trail.isFavorite) 1 else 0)
         }
 
-        this.db.execSQL("""
-            INSERT INTO trails VALUES ('$trackId', "$name", $time $isFavorite);
+        writableDatabase.insert("trails", null, values)
+    }
+
+    fun insertLocation(location: Trail.Location): Int {
+        val values = ContentValues().apply {
+            put("trail_id", location.owner.toString())
+            put("time", location.time)
+            put("longitude", location.longitude)
+            put("latitude", location.latitude)
+            put("altitude", location.altitude)
+            put("accuracy", location.accuracy)
+        }
+
+        writableDatabase.insert("trail_points", null, values)
+
+        // get cursor and count
+        val cursor = readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM trail_points WHERE trail_id = '${location.owner}'",
+            arrayOf()
+        )
+        cursor.moveToFirst()
+        val count = cursor.getInt(0)
+        cursor.close()
+
+        return count
+    }
+
+    fun getAllTrails(): List<Trail> {
+        val output = mutableListOf<Trail>()
+        val cursor = readableDatabase.rawQuery(
+            "SELECT * FROM trails",
+            arrayOf()
+        )
+
+        if (cursor.moveToFirst()) {
+            do {
+                output.add(Trail(
+                    id = UUID.fromString(cursor.getString(0)),
+                    name = cursor.getString(1),
+                    time = cursor.getLong(2),
+                    isFavorite = cursor.getInt(3) == 1
+                ))
+            } while (cursor.moveToNext())
+        }
+
+        return output
+    }
+
+    fun getTrailLocations(trailId: UUID): List<Trail.Location> {
+        val output = mutableListOf<Trail.Location>()
+        val cursor = readableDatabase.rawQuery(
+            "SELECT * FROM trail_points WHERE trail_id = '$trailId'",
+            arrayOf()
+        )
+
+        if (cursor.moveToFirst()) {
+            do {
+                output.add(Trail.Location(
+                    owner = UUID.fromString(cursor.getString(0)),
+                    longitude = cursor.getDouble(2),
+                    latitude = cursor.getDouble(3),
+                    altitude = cursor.getDouble(4),
+                    accuracy = cursor.getDouble(5),
+                    time = cursor.getLong(1)
+                ))
+            } while (cursor.moveToNext())
+        }
+
+        return output
+    }
+
+    fun renameTrail(trailId: UUID, newName: String) {
+        writableDatabase.execSQL("""
+            UPDATE trails 
+            SET name = "$newName" 
+            WHERE id = '$trailId'
         """.trimIndent())
     }
 
-    fun insertLocation(
-        trackId: UUID,
-        longitude: Double,
-        latitude: Double,
-        altitude: Double,
-        accuracy: Double,
-        time: Long
-    ) {
-        if (!this::db.isInitialized) {
-            Log.e("DatabaseHelper", "DB not initialized!")
-            return
-        }
-
-        this.db.execSQL("""
-            INSERT INTO trail_points VALUES ('$trackId', $time, $longitude, $latitude, $altitude, $accuracy);
+    fun setFavorite(trailId: UUID, favorite: Boolean) {
+        writableDatabase.execSQL("""
+            UPDATE trails 
+            SET is_favorite = ${if (favorite) "1" else "0"} 
+            WHERE id = '$trailId'
         """.trimIndent())
+    }
+
+    fun deleteTrail(trailId: UUID) {
+        writableDatabase.execSQL("DELETE FROM trail_points WHERE trail_id = '$trailId'")
+        writableDatabase.execSQL("DELETE FROM trails WHERE id = '$trailId'")
     }
 }
