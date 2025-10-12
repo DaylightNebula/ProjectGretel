@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
 import daylightnebula.projectgretel.data.Trail
+import java.text.SimpleDateFormat
 import java.util.*
 
 class LocationTrackingService : Service() {
@@ -58,7 +59,6 @@ class LocationTrackingService : Service() {
 
         createNotificationChannel()
         createLocationRequest()
-//        createLocationCallback()
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -83,18 +83,6 @@ class LocationTrackingService : Service() {
         ).build()
     }
 
-//    private fun createLocationCallback() {
-//        locationCallback = object : LocationCallback() {
-//            override fun onLocationResult(locationResult: LocationResult) {
-//                super.onLocationResult(locationResult)
-//
-//                locationResult.lastLocation?.let { location ->
-//                    saveLocationToDatabase(location)
-//                }
-//            }
-//        }
-//    }
-
     fun startTracking(): UUID {
         if (isTracking) {
             return currentTrackId ?: UUID.randomUUID()
@@ -104,11 +92,16 @@ class LocationTrackingService : Service() {
         isTracking = true
         lastCount = 0
 
+        val dateTimeFormat = SimpleDateFormat(
+            "MM/dd/yy HH:mm:ss",
+            resources.configuration.locales.get(0)
+        )
+
         DatabaseHelper
             .getInstance(this)
             .insertTrail(Trail(
                 id = currentTrackId!!,
-                name = "TRAIL_${System.currentTimeMillis()}",
+                name = "TRAIL ${dateTimeFormat.format(Date(System.currentTimeMillis()))}",
                 time = System.currentTimeMillis(),
                 isFavorite = false
             ))

@@ -44,6 +44,11 @@ import androidx.compose.ui.window.Dialog
 import daylightnebula.projectgretel.DatabaseHelper
 import daylightnebula.projectgretel.data.Trail
 import daylightnebula.projectgretel.ui.theme.Purple40
+import daylightnebula.projectgretel.ui.theme.PurpleGrey80
+
+// todo favorite
+// todo rename popup
+// todo delete popup
 
 @Composable
 fun HomeComponent(
@@ -53,7 +58,8 @@ fun HomeComponent(
     var trails by remember { mutableStateOf(getAllTrailsSorted(context)) }
 
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
             .padding(20.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -91,89 +97,145 @@ fun HomeComponent(
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(trails) { trail ->
+                items(trails, key = Trail::id) { trail ->
                     TrailItem(
+                        context = context,
                         trail = trail,
-                        onFavoriteClick = {},
-                        onRenameClick = {},
-                        onDeleteClick = {
-                            DatabaseHelper
-                                .getInstance(context)
-                                .deleteTrail(trail.id)
-                            trails = getAllTrailsSorted(context)
-                        }
+                        refresh = { trails = getAllTrailsSorted(context) }
                     )
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            modifier = Modifier
+                .padding(10.dp)
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            colors = ButtonColors(
+                containerColor = PurpleGrey80,
+                contentColor = Color.Black,
+                disabledContentColor = Color.Black,
+                disabledContainerColor = Color.Red
+            ),
+            onClick = {
+                trails = getAllTrailsSorted(context)
+            }
+        ) {
+            Text("Refresh")
         }
     }
 }
 
 @Composable
 private fun TrailItem(
+    context: Context,
     trail: Trail,
-    onFavoriteClick: () -> Unit,
-    onRenameClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    refresh: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
+    var itemName by remember { mutableStateOf(trail.name) }
+    var isFavorite by remember { mutableStateOf(trail.isFavorite) }
+
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var isDeleted by remember { mutableStateOf(false) }
+
+    RenameDialog(
+        showDialog = showRenameDialog,
+        currentName = itemName,
+        onDismiss = { showRenameDialog = false },
+        onConfirm = { text ->
+            DatabaseHelper
+                .getInstance(context)
+                .renameTrail(trail.id, text)
+            itemName = text
+            showRenameDialog = false
+            refresh()
+        }
+    )
+
+    DeleteConfirmDialog(
+        showDialog = showDeleteDialog,
+        itemName = itemName,
+        onDismiss = { showDeleteDialog = false },
+        onConfirm = {
+            DatabaseHelper
+                .getInstance(context)
+                .deleteTrail(trail.id)
+            isDeleted = true
+            showDeleteDialog = false
+            refresh()
+        }
+    )
+
+    if (!isDeleted) {
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(vertical = 4.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            Text(
-                text = trail.name,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
-            )
-
             Row(
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onFavoriteClick,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = if (trail.isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
-                        contentDescription = "Favorite",
-                        tint = if (trail.isFavorite) Color(0xFFFFD700) else Color.Gray
-                    )
-                }
+                Text(
+                    text = itemName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
 
-                IconButton(
-                    onClick = onRenameClick,
-                    modifier = Modifier.size(40.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Edit,
-                        contentDescription = "Rename",
-                        tint = Purple40
-                    )
-                }
+                    IconButton(
+                        onClick = {
+                            isFavorite = !isFavorite
+                            DatabaseHelper
+                                .getInstance(context)
+                                .setFavorite(trailId = trail.id, favorite = isFavorite)
+                            refresh()
+                        },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
+                            contentDescription = "Favorite",
+                            tint = if (isFavorite) Color(0xFFFFD700) else Color.Gray
+                        )
+                    }
 
-                IconButton(
-                    onClick = onDeleteClick,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = "Delete",
-                        tint = Color.Red
-                    )
+                    IconButton(
+                        onClick = { showRenameDialog = true },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = "Rename",
+                            tint = Purple40
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = "Delete",
+                            tint = Color.Red
+                        )
+                    }
                 }
             }
         }
@@ -182,59 +244,75 @@ private fun TrailItem(
 
 @Composable
 fun RenameDialog(
-    oldName: String,
-    onDismissRequest: () -> Unit,
-    onConfirmation: (String) -> Unit
+    showDialog: Boolean,
+    currentName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (newName: String) -> Unit
 ) {
-    var text by remember { mutableStateOf("") }
+    if (showDialog) {
+        // Create a separate state for the text field inside the dialog
+        var newNameText by remember { mutableStateOf(currentName) }
 
-    Dialog(onDismissRequest = { onDismissRequest() }) {
-        // Draw a rectangle shape with rounded corners inside the dialog
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(375.dp)
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = "Rename $oldName",
-                    modifier = Modifier.padding(16.dp),
-                )
-
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                Text(text = "Rename Item")
+            },
+            text = {
                 OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    label = { Text("Enter new name") },
+                    value = newNameText,
+                    onValueChange = { newNameText = it },
+                    label = { Text("New Name") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { onConfirm(newNameText) },
+                    enabled = newNameText.isNotBlank()
                 ) {
-                    TextButton(
-                        onClick = { onDismissRequest() },
-                        modifier = Modifier.padding(8.dp),
-                    ) {
-                        Text("Dismiss")
-                    }
-                    TextButton(
-                        onClick = { onConfirmation(text) },
-                        modifier = Modifier.padding(8.dp),
-                    ) {
-                        Text("Confirm")
-                    }
+                    Text("Rename")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
                 }
             }
-        }
+        )
+    }
+}
+
+@Composable
+fun DeleteConfirmDialog(
+    showDialog: Boolean,
+    itemName: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                Text(text = "Delete Trail: $itemName")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onConfirm()
+                        onDismiss()
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -244,6 +322,7 @@ private fun getAllTrailsSorted(context: Context): List<Trail> =
         .getAllTrails()
         .sortedWith(
             comparator =
-                compareBy<Trail> { it.isFavorite }
+                compareBy<Trail> { !it.isFavorite }
+                    .thenBy { it.name.startsWith("TRAIL") }
                     .thenBy { it.name }
         )
