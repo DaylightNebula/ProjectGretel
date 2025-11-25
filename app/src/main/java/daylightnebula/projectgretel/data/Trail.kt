@@ -45,5 +45,19 @@ data class Trail(
             // 3D distance using Pythagorean theorem
             return sqrt(horizontalDistance.pow(2) + altitudeDiff.pow(2))
         }
+
+        fun azimuthTo(target: Location): Double {
+            val lat1 = this.latitude * 0.0174533
+            val lat2 = target.latitude * 0.0174533
+            val deltaLon = (target.longitude - this.longitude) * 0.0174533
+
+            val y = sin(deltaLon) * cos(lat2)
+            val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(deltaLon)
+
+            val bearing = atan2(y, x) * 57.2958
+
+            // Normalize to 0-360 degrees
+            return (bearing + 360) % 360
+        }
     }
 }

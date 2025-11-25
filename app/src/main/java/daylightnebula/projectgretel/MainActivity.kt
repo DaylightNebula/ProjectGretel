@@ -22,9 +22,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import daylightnebula.projectgretel.components.FollowComponent
 import daylightnebula.projectgretel.components.HomeComponent
 import daylightnebula.projectgretel.components.TrackingComponent
 import daylightnebula.projectgretel.ui.theme.ProjectGretelTheme
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     private lateinit var locationService: LocationTrackingService
@@ -174,8 +176,19 @@ class MainActivity : ComponentActivity() {
                 context = this,
                 onStartTrail = {
                     Log.d("MainActivity", "Open start trail!")
-                    locationService.startTracking()
+                    locationService.startTracking(
+                        trackId = UUID.randomUUID(),
+                        saveTrack = true
+                    )
                     currentState = State.Tracking
+                },
+                onFollowTrail = { id ->
+                    Log.d("MainActivity", "Following trail!")
+                    locationService.startTracking(
+                        trackId = id,
+                        saveTrack = false
+                    )
+                    currentState = State.Following
                 }
             )
             State.Tracking -> TrackingComponent(
@@ -186,7 +199,16 @@ class MainActivity : ComponentActivity() {
                     currentState = State.Home
                 }
             )
-            State.Following -> TODO()
+            State.Following -> FollowComponent(
+                context = this,
+                locationService = locationService,
+                trackId = locationService.getCurrentTrackId()!!,
+                onReturn = {
+                    Log.d("MainActivity", "Ending follow!")
+                    locationService.stopTracking()
+                    currentState = State.Home
+                }
+            )
         }
     }
 }

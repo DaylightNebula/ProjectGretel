@@ -31,13 +31,18 @@ class LocationTrackingService : Service() {
     }
 
     private var isTracking = false
+    private var saveTrack = false
     private var currentTrackId: UUID? = null
 
     var lastLongitude: Double = 0.0
         private set
     var lastLatitude: Double = 0.0
         private set
+    var lastAltitude: Double = 0.0
+        private set
     var lastAccuracy: Double = 0.0
+        private set
+    var lastTime: Long = 0
         private set
     var lastCount: Int = 0
         private set
@@ -84,28 +89,31 @@ class LocationTrackingService : Service() {
         ).build()
     }
 
-    fun startTracking(): UUID {
-        if (isTracking) {
-            return currentTrackId ?: UUID.randomUUID()
-        }
+    fun startTracking(trackId: UUID, saveTrack: Boolean): UUID {
+        if (isTracking) return currentTrackId ?: UUID.randomUUID()
 
-        currentTrackId = UUID.randomUUID()
-        isTracking = true
-        lastCount = 0
+        this.currentTrackId = trackId
+        this.isTracking = true
+        this.saveTrack = saveTrack
+        this.lastCount = 0
 
         val dateTimeFormat = SimpleDateFormat(
             "MM/dd/yy HH:mm:ss",
             resources.configuration.locales.get(0)
         )
 
-        DatabaseHelper
-            .getInstance(this)
-            .insertTrail(Trail(
-                id = currentTrackId!!,
-                name = "TRAIL ${dateTimeFormat.format(Date(System.currentTimeMillis()))}",
-                time = System.currentTimeMillis(),
-                isFavorite = false
-            ))
+        if (saveTrack) {
+            DatabaseHelper
+                .getInstance(this)
+                .insertTrail(
+                    Trail(
+                        id = currentTrackId!!,
+                        name = "TRAIL ${dateTimeFormat.format(Date(System.currentTimeMillis()))}",
+                        time = System.currentTimeMillis(),
+                        isFavorite = false
+                    )
+                )
+        }
 
         startForeground(NOTIFICATION_ID, createNotification())
         startLocationUpdates()
@@ -125,6 +133,7 @@ class LocationTrackingService : Service() {
     }
 
     fun isTracking(): Boolean = isTracking
+    fun isSaving(): Boolean = saveTrack
     fun getCurrentTrackId(): UUID? = currentTrackId
 
     private fun startLocationUpdates() {
@@ -146,12 +155,15 @@ class LocationTrackingService : Service() {
     }
 
     private fun saveLocationToDatabase(location: Location) {
-        Log.d("LTS", "Saving to track ID: $currentTrackId")
         currentTrackId?.let { trackId ->
             lastLongitude = location.longitude
             lastLatitude = location.latitude
+            lastAltitude = location.altitude
             lastAccuracy = location.accuracy.toDouble()
+            lastTime = location.time
             Log.d("LTS", "Found $lastLongitude $lastLatitude $lastAccuracy")
+
+            if (!this.saveTrack) return@let
 
             // get current location
             val currentLocation = Trail.Location(

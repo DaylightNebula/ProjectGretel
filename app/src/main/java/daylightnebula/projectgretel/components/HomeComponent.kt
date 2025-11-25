@@ -40,20 +40,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import daylightnebula.projectgretel.DatabaseHelper
 import daylightnebula.projectgretel.data.Trail
 import daylightnebula.projectgretel.ui.theme.Purple40
 import daylightnebula.projectgretel.ui.theme.PurpleGrey80
-
-// todo favorite
-// todo rename popup
-// todo delete popup
+import java.util.UUID
 
 @Composable
 fun HomeComponent(
     context: Context,
-    onStartTrail: () -> Unit
+    onStartTrail: () -> Unit,
+    onFollowTrail: (UUID) -> Unit
 ) {
     var trails by remember { mutableStateOf(getAllTrailsSorted(context)) }
 
@@ -101,7 +98,8 @@ fun HomeComponent(
                     TrailItem(
                         context = context,
                         trail = trail,
-                        refresh = { trails = getAllTrailsSorted(context) }
+                        refresh = { trails = getAllTrailsSorted(context) },
+                        onFollowTrail = onFollowTrail
                     )
                 }
             }
@@ -133,7 +131,8 @@ fun HomeComponent(
 private fun TrailItem(
     context: Context,
     trail: Trail,
-    refresh: () -> Unit
+    refresh: () -> Unit,
+    onFollowTrail: (UUID) -> Unit
 ) {
     var itemName by remember { mutableStateOf(trail.name) }
     var isFavorite by remember { mutableStateOf(trail.isFavorite) }
@@ -198,6 +197,19 @@ private fun TrailItem(
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(
+                        onClick = {
+                            onFollowTrail(trail.id)
+                        },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = "Play",
+                            tint = Color.Green
+                        )
+                    }
+
                     IconButton(
                         onClick = {
                             isFavorite = !isFavorite
