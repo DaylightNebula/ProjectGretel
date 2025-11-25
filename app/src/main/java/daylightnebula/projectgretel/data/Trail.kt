@@ -1,6 +1,11 @@
 package daylightnebula.projectgretel.data
 
 import java.util.UUID
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 data class Trail(
     val id: UUID,
@@ -15,5 +20,30 @@ data class Trail(
         val altitude: Double,
         val accuracy: Double,
         val time: Long
-    )
+    ) {
+        fun distanceTo(other: Location): Double {
+            val earthRadius = 6371000.0 // Earth's radius in meters
+
+            // Convert latitude and longitude from degrees to radians
+            val lat1Rad = Math.toRadians(this.latitude)
+            val lat2Rad = Math.toRadians(other.latitude)
+            val deltaLat = Math.toRadians(other.latitude - this.latitude)
+            val deltaLon = Math.toRadians(other.longitude - this.longitude)
+
+            // Haversine formula
+            val a = sin(deltaLat / 2).pow(2) +
+                    cos(lat1Rad) * cos(lat2Rad) *
+                    sin(deltaLon / 2).pow(2)
+            val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+            // Horizontal distance
+            val horizontalDistance = earthRadius * c
+
+            // Altitude difference
+            val altitudeDiff = other.altitude - this.altitude
+
+            // 3D distance using Pythagorean theorem
+            return sqrt(horizontalDistance.pow(2) + altitudeDiff.pow(2))
+        }
+    }
 }

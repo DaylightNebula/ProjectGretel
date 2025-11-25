@@ -8,3 +8,15 @@
 1756858152741|a392521d-fd90-4ab1-b8d3-fc5d0e817769|{"type":"create","title":"(Expand) Add png images and favorites for saved routes"}
 1756858163686|1ba224e2-c3e6-41e8-ba87-33112e5a190c|{"type":"create","title":"(Expand) Saved route management"}
 1757020556024|096f9888-6f35-4f21-858b-01c49a0bd594|{"type":"set_completed","completed":true}
+1764031141867|5bfbdb9d-7180-4bdf-be3e-0dc0da2cdaa3|{"type":"set_completed","completed":true}
+1764031153055|a886bde1-7c1d-49a9-b445-194752bb270c|{"type":"set_completed","completed":true}
+1764031190177|ffd16d67-1370-45a4-9d25-22813c50879e|{"type":"create","title":"Only track new locations that are outside of the accuracy of the last point"}
+1764031208860|5cef33fa-54b8-451b-ae30-35166e38823b|{"type":"create","title":"Find how to get distance and cradinal direction between locations"}
+1764031275586|49df72ab-4da0-4d9e-8c7b-52a97701ba25|{"type":"create","title":"Draw rotating compass"}
+1764031285815|9cbb09a0-c2b5-438e-844a-f4353f762a51|{"type":"create","title":"Make compass point to next route point"}
+1764031302604|b1ad57b5-9fec-41d0-8c10-06585ca68bce|{"type":"create","title":"Progress route points when within accuracy of them"}
+1764031321449|428c1420-522d-427d-ad2c-2b0027c5bda7|{"type":"create","title":"Show approximate distance with accuracy to next point"}
+1764031324138|39e332c2-8b13-40d2-8885-83f0287f290e|{"type":"delete"}
+1764031332721|1ba224e2-c3e6-41e8-ba87-33112e5a190c|{"type":"set_completed","completed":true}
+1764040584625|5cef33fa-54b8-451b-ae30-35166e38823b|{"type":"set_completed","completed":true}
+1764040584998|ffd16d67-1370-45a4-9d25-22813c50879e|{"type":"set_completed","completed":true}

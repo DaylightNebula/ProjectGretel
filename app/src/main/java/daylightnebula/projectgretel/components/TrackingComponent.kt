@@ -59,7 +59,7 @@ fun TrackingComponent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("Actively Tracking!")
-            Text("Please leave the app running in the background while your enjoy your travels!")
+            Text("Please leave the app running in the background while you enjoy your travels!")
             Spacer(Modifier.height(30.dp))
             Text("GPS ${locationService.lastLatitude} x ${locationService.lastLongitude}")
             Text("Accuracy ${locationService.lastAccuracy}m")

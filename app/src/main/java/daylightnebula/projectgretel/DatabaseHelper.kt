@@ -105,6 +105,34 @@ class DatabaseHelper private constructor(
         return count
     }
 
+    fun getLastLocation(trailId: UUID): Trail.Location? {
+        // attempt to get last location from database
+        val cursor = readableDatabase.rawQuery(
+            """
+                SELECT * FROM trail_points 
+                WHERE trail_id = '$trailId'
+                ORDER BY trail_points.time DESC
+                LIMIT 1;
+            """.trimIndent(),
+            arrayOf()
+        )
+        if (cursor.count < 1) return null
+
+        // decode location
+        cursor.moveToFirst()
+        val location = Trail.Location(
+            owner = trailId,
+            time = cursor.getLong(1),
+            longitude = cursor.getDouble(2),
+            latitude = cursor.getDouble(3),
+            altitude = cursor.getDouble(4),
+            accuracy = cursor.getDouble(5)
+        )
+        cursor.close()
+
+        return location
+    }
+
     fun getAllTrails(): List<Trail> {
         val output = mutableListOf<Trail>()
         val cursor = readableDatabase.rawQuery(

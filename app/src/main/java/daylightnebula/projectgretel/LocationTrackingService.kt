@@ -7,6 +7,7 @@ import android.location.Location
 import android.os.Binder
 import android.os.IBinder
 import android.os.Looper
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
@@ -145,21 +146,35 @@ class LocationTrackingService : Service() {
     }
 
     private fun saveLocationToDatabase(location: Location) {
+        Log.d("LTS", "Saving to track ID: $currentTrackId")
         currentTrackId?.let { trackId ->
             lastLongitude = location.longitude
             lastLatitude = location.latitude
             lastAccuracy = location.accuracy.toDouble()
+            Log.d("LTS", "Found $lastLongitude $lastLatitude $lastAccuracy")
 
-            lastCount = DatabaseHelper.getInstance(this).insertLocation(
-                Trail.Location(
-                    owner = trackId,
-                    latitude = location.latitude,
-                    longitude = location.longitude,
-                    altitude = location.altitude,
-                    accuracy = location.accuracy.toDouble(),
-                    time = location.time
-                )
+            // get current location
+            val currentLocation = Trail.Location(
+                owner = trackId,
+                latitude = location.latitude,
+                longitude = location.longitude,
+                altitude = location.altitude,
+                accuracy = location.accuracy.toDouble(),
+                time = location.time
             )
+
+            // get db and last location
+            val db = DatabaseHelper.getInstance(this)
+            val isLastLocationToClose = db.getLastLocation(trackId)?.let { lastLocation ->
+                val dist = lastLocation.distanceTo(currentLocation)
+                Log.d("LTS", "Distance to last: $dist")
+                dist < currentLocation.accuracy + lastLocation.accuracy
+            } ?: false
+
+            Log.d("LTS", "Adding location? ${!isLastLocationToClose}")
+
+            // insert location and get last count
+            if (!isLastLocationToClose) lastCount = db.insertLocation(currentLocation)
         }
     }
 
