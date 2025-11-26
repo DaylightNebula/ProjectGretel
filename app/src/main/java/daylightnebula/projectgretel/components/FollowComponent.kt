@@ -43,9 +43,9 @@ fun FollowComponent(
     val db = DatabaseHelper.getInstance(context)
     var trackingPoint by remember {
         val trail = db.getTrailLocations(trackId)
-        mutableStateOf(trail[0])
+        mutableStateOf(trail[0]) // todo what in no points in trail
     }
-    var azimuth by remember {
+    var targetAzimuth by remember {
         val azimuth = Trail.Location(
             owner = trackId,
             longitude = locationService.lastLongitude,
@@ -57,73 +57,10 @@ fun FollowComponent(
         mutableDoubleStateOf(azimuth)
     }
 
+    var azimuth by remember { mutableFloatStateOf(0f) }
+    var direction by remember { mutableStateOf("N") }
+
     DisposableEffect(Unit) {
-        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        val magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
-
-        var accelerometerReading = FloatArray(3)
-        var magnetometerReading = FloatArray(3)
-        var lastAzimuth = 0.0
-
-        val sensorEventListener = object : SensorEventListener {
-            override fun onSensorChanged(event: SensorEvent) {
-                when (event.sensor.type) {
-                    Sensor.TYPE_ACCELEROMETER -> {
-                        accelerometerReading = lowPassFilter(event.values.clone(), accelerometerReading)
-                    }
-                    Sensor.TYPE_MAGNETIC_FIELD -> {
-                        magnetometerReading = lowPassFilter(event.values.clone(), magnetometerReading)
-                    }
-                }
-
-                val rotationMatrix = FloatArray(9)
-                val inclinationMatrix = FloatArray(9)
-                val remappedMatrix = FloatArray(9)
-                val orientationAngles = FloatArray(3)
-
-                val success = SensorManager.getRotationMatrix(
-                    rotationMatrix,
-                    inclinationMatrix,
-                    accelerometerReading,
-                    magnetometerReading
-                )
-
-                if (success) {
-                    // Remap coordinate system for portrait mode
-                    SensorManager.remapCoordinateSystem(
-                        rotationMatrix,
-                        SensorManager.AXIS_X,
-                        SensorManager.AXIS_Z,
-                        remappedMatrix
-                    )
-
-                    SensorManager.getOrientation(remappedMatrix, orientationAngles)
-
-                    // Convert from radians to degrees
-                    var azimuthDegrees = Math.toDegrees(orientationAngles[0].toDouble())
-                    azimuthDegrees = (azimuthDegrees + 360) % 360
-
-                    // Smooth the rotation
-                    azimuth = smoothAzimuth(lastAzimuth, azimuthDegrees)
-                    println("Orientation $azimuth")
-                    lastAzimuth = azimuth
-                }
-            }
-
-            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-        }
-
-        sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_GAME)
-        sensorManager.registerListener(sensorEventListener, magnetometer, SensorManager.SENSOR_DELAY_GAME)
-
-        onDispose {
-            sensorManager.unregisterListener(sensorEventListener)
-        }
-    }
-
-    // Set up sensor listener
-    /*DisposableEffect(Unit) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         val magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
@@ -145,31 +82,54 @@ fun FollowComponent(
                 val rotationMatrix = FloatArray(9)
                 val orientationAngles = FloatArray(3)
 
-                if (SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading)) {
+                val success = SensorManager.getRotationMatrix(
+                    rotationMatrix,
+                    null,
+                    accelerometerReading,
+                    magnetometerReading
+                )
+
+                if (success) {
                     SensorManager.getOrientation(rotationMatrix, orientationAngles)
-                    val orientation = Math.toDegrees(orientationAngles[0].toDouble())
-                    println("Orientation $orientation")
-                    azimuth = Trail.Location(
-                        owner = trackId,
-                        longitude = locationService.lastLongitude,
-                        latitude = locationService.lastLatitude,
-                        altitude = locationService.lastAltitude,
-                        accuracy = locationService.lastAccuracy,
-                        time = locationService.lastTime
-                    ).azimuthTo(trackingPoint) - orientation
+
+                    // Convert radians to degrees and normalize to 0-360
+                    val azimuthDegrees = Math.toDegrees(orientationAngles[0].toDouble()).toFloat()
+                    azimuth = (azimuthDegrees + 360) % 360
+
+                    direction = when (azimuth) {
+                        in 337.5f..360.0f, in 0.0f..22.5f -> "N"
+                        in 22.5f..67.5f -> "NE"
+                        in 67.5f..112.5f -> "E"
+                        in 112.5f..157.5f -> "SE"
+                        in 157.5f..202.5f -> "S"
+                        in 202.5f..247.5f -> "SW"
+                        in 247.5f..292.5f -> "W"
+                        in 292.5f..337.5f -> "NW"
+                        else -> "N"
+                    }
+
+                    println("Direction $direction, Azimuth: $azimuth, Target: $targetAzimuth")
                 }
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
         }
 
-        sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_UI)
-        sensorManager.registerListener(sensorEventListener, magnetometer, SensorManager.SENSOR_DELAY_UI)
+        sensorManager.registerListener(
+            sensorEventListener,
+            accelerometer,
+            SensorManager.SENSOR_DELAY_UI
+        )
+        sensorManager.registerListener(
+            sensorEventListener,
+            magnetometer,
+            SensorManager.SENSOR_DELAY_UI
+        )
 
         onDispose {
             sensorManager.unregisterListener(sensorEventListener)
         }
-    }*/
+    }
 
     Button(
         modifier = Modifier
@@ -200,27 +160,27 @@ fun FollowComponent(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Direction text
+            var drawAzimuth = azimuth - targetAzimuth
+            drawAzimuth = (drawAzimuth + 360) % 360
+
+            val currentLocation = Trail.Location(
+                owner = trackId,
+                longitude = locationService.lastLongitude,
+                latitude = locationService.lastLatitude,
+                altitude = locationService.lastAltitude,
+                accuracy = locationService.lastAccuracy,
+                time = locationService.lastTime
+            )
+            val dist = currentLocation.distanceTo(trackingPoint)
+
+            CompassView(azimuth = drawAzimuth)
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = getDirection(azimuth),
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
+                text = "To Next Point: %.0fm".format(dist),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Medium,
                 color = Color(0xFF666666)
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Degree text
-            Text(
-                text = "${normalizeAzimuth(azimuth).toInt()}°",
-                fontSize = 24.sp,
-                color = Color(0xFFAAAAAA)
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Compass
-            CompassView(azimuth = azimuth)
         }
     }
 }
