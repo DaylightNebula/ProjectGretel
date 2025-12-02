@@ -41,10 +41,18 @@ fun FollowComponent(
 ) {
     val context = LocalContext.current
     val db = DatabaseHelper.getInstance(context)
-    var trackingPoint by remember {
-        val trail = db.getTrailLocations(trackId)
-        mutableStateOf(trail[0]) // todo what in no points in trail
-    }
+    var pointIndex by remember { mutableIntStateOf(0) }
+//    var trackingPoint by remember {
+//        val trail = db.getTrailLocations(trackId)
+//        mutableStateOf(trail[0]) // todo what in no points in trail
+//    }
+
+    val points = db.getTrailLocations(trackId)
+    val trackingPoint =
+        if (pointIndex < 0) points.first()
+        else if (pointIndex >= points.size) points.last()
+        else points[pointIndex]
+
     var targetAzimuth by remember {
         val azimuth = Trail.Location(
             owner = trackId,
@@ -107,8 +115,6 @@ fun FollowComponent(
                         in 292.5f..337.5f -> "NW"
                         else -> "N"
                     }
-
-                    println("Direction $direction, Azimuth: $azimuth, Target: $targetAzimuth")
                 }
             }
 
@@ -173,14 +179,29 @@ fun FollowComponent(
             )
             val dist = currentLocation.distanceTo(trackingPoint)
 
+            if (dist < trackingPoint.accuracy && pointIndex < points.size - 1)
+                pointIndex++
+
             CompassView(azimuth = drawAzimuth)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "To Next Point: %.0fm".format(dist),
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF666666)
-            )
+            if (pointIndex < points.size && dist > trackingPoint.accuracy) {
+                Text(
+                    text = "To Next Point: %.0fm\nAccuracy: %.1fm".format(
+                        dist,
+                        trackingPoint.accuracy + currentLocation.accuracy
+                    ),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF666666)
+                )
+            } else {
+                Text(
+                    text = "Complete!",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF666666)
+                )
+            }
         }
     }
 }

@@ -186,7 +186,7 @@ class LocationTrackingService : Service() {
             Log.d("LTS", "Adding location? ${!isLastLocationToClose}")
 
             // insert location and get last count
-            if (!isLastLocationToClose) lastCount = db.insertLocation(currentLocation)
+            /*if (!isLastLocationToClose) */lastCount = db.insertLocation(currentLocation)
         }
     }
 
