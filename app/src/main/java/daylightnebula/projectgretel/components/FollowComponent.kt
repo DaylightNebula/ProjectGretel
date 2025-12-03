@@ -42,10 +42,6 @@ fun FollowComponent(
     val context = LocalContext.current
     val db = DatabaseHelper.getInstance(context)
     var pointIndex by remember { mutableIntStateOf(0) }
-//    var trackingPoint by remember {
-//        val trail = db.getTrailLocations(trackId)
-//        mutableStateOf(trail[0]) // todo what in no points in trail
-//    }
 
     val points = db.getTrailLocations(trackId)
     val trackingPoint =
@@ -66,7 +62,6 @@ fun FollowComponent(
     }
 
     var azimuth by remember { mutableFloatStateOf(0f) }
-    var direction by remember { mutableStateOf("N") }
 
     DisposableEffect(Unit) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -103,18 +98,6 @@ fun FollowComponent(
                     // Convert radians to degrees and normalize to 0-360
                     val azimuthDegrees = Math.toDegrees(orientationAngles[0].toDouble()).toFloat()
                     azimuth = (azimuthDegrees + 360) % 360
-
-                    direction = when (azimuth) {
-                        in 337.5f..360.0f, in 0.0f..22.5f -> "N"
-                        in 22.5f..67.5f -> "NE"
-                        in 67.5f..112.5f -> "E"
-                        in 112.5f..157.5f -> "SE"
-                        in 157.5f..202.5f -> "S"
-                        in 202.5f..247.5f -> "SW"
-                        in 247.5f..292.5f -> "W"
-                        in 292.5f..337.5f -> "NW"
-                        else -> "N"
-                    }
                 }
             }
 
@@ -279,46 +262,3 @@ fun CompassView(azimuth: Double) {
     }
 }
 
-fun getDirection(azimuth: Double): String {
-    val normalized = normalizeAzimuth(azimuth)
-    return when {
-        normalized >= 337.5 || normalized < 22.5 -> "N"
-        normalized >= 22.5 && normalized < 67.5 -> "NE"
-        normalized >= 67.5 && normalized < 112.5 -> "E"
-        normalized >= 112.5 && normalized < 157.5 -> "SE"
-        normalized >= 157.5 && normalized < 202.5 -> "S"
-        normalized >= 202.5 && normalized < 247.5 -> "SW"
-        normalized >= 247.5 && normalized < 292.5 -> "W"
-        normalized >= 292.5 && normalized < 337.5 -> "NW"
-        else -> "N"
-    }
-}
-
-fun normalizeAzimuth(azimuth: Double): Double {
-    return (azimuth + 360) % 360
-}
-
-fun lowPassFilter(input: FloatArray, output: FloatArray?): FloatArray {
-    val alpha = 0.15f // Smoothing factor (0 < alpha < 1)
-
-    if (output == null) return input
-
-    for (i in input.indices) {
-        output[i] = output[i] + alpha * (input[i] - output[i])
-    }
-
-    return output
-}
-
-fun smoothAzimuth(lastAzimuth: Double, newAzimuth: Double): Double {
-    var diff = newAzimuth - lastAzimuth
-
-    // Handle 360/0 degree boundary
-    if (diff > 180) {
-        diff -= 360
-    } else if (diff < -180) {
-        diff += 360
-    }
-
-    return (lastAzimuth + diff * 0.3f + 360) % 360
-}
